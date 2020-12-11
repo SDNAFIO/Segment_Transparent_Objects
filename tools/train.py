@@ -197,6 +197,7 @@ class Trainer(object):
             if iteration % self.eval_interval == 0:
                 for evaluator in self.evaluators:
                     evaluator.eval(eval_size=self.eval_size, eval_iter=iteration)
+                    self.model.train()
 
         total_training_time = time.time() - start_time
         total_training_str = str(datetime.timedelta(seconds=total_training_time))
@@ -227,7 +228,7 @@ if __name__ == '__main__':
     comet_exp = Experiment(api_key=api_key, workspace=workspace, project_name=project_name)
 
     # create a trainer and start train
-    trainer = Trainer(args, logger=comet_exp, eval_interval=1000, eval_size=300)
+    trainer = Trainer(args, logger=comet_exp, eval_interval=500, eval_size=300)
     evaluator_trans = Evaluator(args, logger=comet_exp, is_kopf=False, model=trainer.model)
     evaluator_kopf = Evaluator(args, logger=comet_exp, is_kopf=True, model=trainer.model)
 

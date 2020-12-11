@@ -4,7 +4,7 @@ DATASET:
     STD: [0.229, 0.224, 0.225]
 TRAIN:
     EPOCHS: 16
-    BATCH_SIZE: 11
+    BATCH_SIZE: 2
     CROP_SIZE: 769
     MODEL_SAVE_DIR: 'workdirs/debug'
 TEST:
