@@ -2,6 +2,7 @@ import time
 import datetime
 import os
 import sys
+from comet_ml import Experiment
 
 cur_path = os.path.abspath(os.path.dirname(__file__))
 root_path = os.path.split(cur_path)[0]
@@ -26,12 +27,17 @@ from segmentron.utils.options import parse_args
 from segmentron.utils.default_setup import default_setup
 from segmentron.utils.visualize import show_flops_params
 from segmentron.config import cfg
-from IPython import embed
+from tools.test_translab import Evaluator
+
 
 class Trainer(object):
-    def __init__(self, args):
+    def __init__(self, args, logger, eval_interval=100, eval_size=20):
         self.args = args
         self.device = torch.device(args.device)
+        self.logger = logger
+        self.evaluators = None
+        self.eval_interval = eval_interval
+        self.eval_size = eval_size
 
         # image transform
         input_transform = transforms.Compose([
@@ -40,7 +46,7 @@ class Trainer(object):
         ])
         # dataset and dataloader
         data_kwargs = {'transform': input_transform, 'base_size': cfg.TRAIN.BASE_SIZE,
-                       'crop_size': cfg.TRAIN.CROP_SIZE}
+                       'crop_size': cfg.TRAIN.CROP_SIZE, 'root': '/home/bic/fast-data/Trans10K'}
         train_dataset = get_segmentation_dataset(cfg.DATASET.NAME, split='train', mode='train', **data_kwargs)
         # #debug code
         # import cv2
@@ -119,6 +125,8 @@ class Trainer(object):
         # self.metric = SegmentationMetric(train_dataset.num_class, args.distributed)
         # self.best_pred = 0.0
 
+    def set_evaluators(self, evaluators):
+        self.evaluators = evaluators
 
     def train(self):
         self.save_to_disk = get_rank() == 0
@@ -171,6 +179,10 @@ class Trainer(object):
             eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
             if iteration % log_per_iters == 0 and self.save_to_disk:
+                self.logger.log_metric('lr', self.optimizer.param_groups[0]['lr'])
+                self.logger.log_metric('loss', losses_reduced.item())
+                self.logger.log_metric('loss_b', lossesb_reduced.item())
+
                 logging.info(
                     "Epoch: {:d}/{:d} || Iters: {:d}/{:d} || Lr: {:.6f} || "
                     "Loss: {:.4f} || Loss_b: {:.4f} || Cost Time: {} || Estimated Time: {}".format(
@@ -182,12 +194,17 @@ class Trainer(object):
             if iteration % self.iters_per_epoch == 0 and self.save_to_disk:
                 save_checkpoint(self.model, epoch, self.optimizer, self.lr_scheduler, is_best=False)
 
+            if iteration % self.eval_interval == 0:
+                for evaluator in self.evaluators:
+                    evaluator.eval(eval_size=self.eval_size, eval_iter=iteration)
+
         total_training_time = time.time() - start_time
         total_training_str = str(datetime.timedelta(seconds=total_training_time))
         logging.info(
             "Total training time: {} ({:.4f}s / it)".format(
                 total_training_str, total_training_time / max_iters))
 
+        self.iteration = iteration
 
 
 if __name__ == '__main__':
@@ -202,6 +219,20 @@ if __name__ == '__main__':
     # setup python train environment, logger, seed..
     default_setup(args)
 
+    # comet logging
+    workspace = 'robharb'
+    project_name = 'transparent_in_the_wild'
+    api_key = 'nb8eG5Ru2ZHIELzbmanxmDsqP'
+
+    comet_exp = Experiment(api_key=api_key, workspace=workspace, project_name=project_name)
+
     # create a trainer and start train
-    trainer = Trainer(args)
+    trainer = Trainer(args, logger=comet_exp, eval_interval=1000, eval_size=300)
+    evaluator_trans = Evaluator(args, logger=comet_exp, is_kopf=False, model=trainer.model)
+    evaluator_kopf = Evaluator(args, logger=comet_exp, is_kopf=True, model=trainer.model)
+
+    trainer.set_evaluators([evaluator_trans, evaluator_kopf])
     trainer.train()
+
+    evaluator_trans.eval(eval_iter=trainer.iteration)
+    evaluator_kopf.eval(eval_iter=trainer.iteration)

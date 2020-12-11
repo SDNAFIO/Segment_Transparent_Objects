@@ -5,7 +5,7 @@ import numpy as np
 import logging
 
 from PIL import Image
-from .seg_data_base import SegmentationDataset
+from segmentron.data.dataloader.seg_data_base import SegmentationDataset
 from IPython import embed
 
 class TransSegmentation(SegmentationDataset):
@@ -130,4 +130,18 @@ def _get_trans10k_pairs(folder, split='train'):
     return img_paths, mask_paths
 
 if __name__ == '__main__':
-    dataset = TransSegmentation()
+    import matplotlib.pyplot as plt
+
+    dataset = TransSegmentation(root='/home/bic/fast-data/Trans10K')
+
+    for plot_idx in range(0,5):
+        img, mask, base_name = dataset.__getitem__(plot_idx)
+
+        plt.figure()
+        plt.subplot(121)
+        plt.imshow(img)
+        plt.subplot(122)
+        plt.imshow(mask)
+        plt.show()
+
+    print()

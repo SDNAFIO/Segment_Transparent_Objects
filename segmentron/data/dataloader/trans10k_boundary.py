@@ -5,7 +5,7 @@ import numpy as np
 import logging
 
 from PIL import Image
-from .seg_data_base import SegmentationDataset
+from segmentron.data.dataloader.seg_data_base import SegmentationDataset
 from IPython import embed
 import cv2
 
@@ -24,11 +24,14 @@ class TransSegmentationBoundary(SegmentationDataset):
     BASE_DIR = 'Trans10K'
     NUM_CLASS = 3
 
-    def __init__(self, root='datasets/Trans10K', split='train', mode=None, transform=None, **kwargs):
+    def __init__(self, root='datasets/Trans10K', split='train', mode=None, transform=None, is_kopf=False, **kwargs):
         super(TransSegmentationBoundary, self).__init__(root, split, mode, transform, **kwargs)
+
+        self.is_kopf = is_kopf
+
         # self.root = os.path.join(root, self.BASE_DIR)
         assert os.path.exists(self.root), "Please put dataset in {SEG_ROOT}/datasets/Trans10K"
-        self.images, self.mask_paths = _get_trans10k_pairs(self.root, self.split)
+        self.images, self.mask_paths = _get_trans10k_pairs(self.root, self.split, is_kopf=is_kopf)
         assert (len(self.images) == len(self.mask_paths))
         if len(self.images) == 0:
             raise RuntimeError("Found 0 images in subfolders of:" + root + "\n")
@@ -54,9 +57,14 @@ class TransSegmentationBoundary(SegmentationDataset):
             return img, os.path.basename(self.images[index])
         mask = Image.open(self.mask_paths[index])
         # 转换mask
-        mask = np.array(mask)[:,:,:3].mean(-1)
-        mask[mask==85.0] = 1
-        mask[mask==255.0] = 2
+        if self.is_kopf:
+            mask = np.array(mask)
+            mask[mask==255.0] = 1
+        else:
+            mask = np.array(mask)[:, :, :3].mean(-1)
+            mask[mask==85.0] = 1
+            mask[mask==255.0] = 2
+
         assert mask.max()<=2, mask.max()
         mask = Image.fromarray(mask)
 
@@ -68,7 +76,6 @@ class TransSegmentationBoundary(SegmentationDataset):
         else:
             assert self.mode == 'testval'
             img, mask = self._img_transform(img), self._mask_transform(mask)
-
 
         boundary = self.get_boundary(mask)
         boundary = torch.LongTensor(np.array(boundary).astype('int32'))
@@ -102,7 +109,7 @@ class TransSegmentationBoundary(SegmentationDataset):
         return ('background', 'things', 'stuff')
 
 
-def _get_trans10k_pairs(folder, split='train'):
+def _get_trans10k_pairs(folder, split='train', is_kopf=False):
 
     def get_path_pairs(img_folder, mask_folder):
         img_paths = []
@@ -111,7 +118,11 @@ def _get_trans10k_pairs(folder, split='train'):
 
         for imgname in imgs:
             imgpath = os.path.join(img_folder, imgname)
-            maskname = imgname.replace('.jpg', '_mask.png')
+
+            if not is_kopf:
+                maskname = imgname.replace('.jpg', '_mask.png')
+            else:
+                maskname = 'Mask{}.png'.format(imgname.split('Image')[-1].split('.jpg')[0])
             maskpath = os.path.join(mask_folder, maskname)
             if os.path.isfile(imgpath) and os.path.isfile(maskpath):
                 img_paths.append(imgpath)
@@ -123,7 +134,7 @@ def _get_trans10k_pairs(folder, split='train'):
         return img_paths, mask_paths
 
 
-    if split == 'train':
+    if split == 'train' or is_kopf:
         img_folder = os.path.join(folder, split, 'images')
         mask_folder = os.path.join(folder, split, 'masks')
         img_paths, mask_paths = get_path_pairs(img_folder, mask_folder)
@@ -144,4 +155,27 @@ def _get_trans10k_pairs(folder, split='train'):
 
 
 if __name__ == '__main__':
-    dataset = TransSegmentationBoundary()
+    import matplotlib.pyplot as plt
+
+    def plot_dataset(dataset, num):
+        for plot_idx in range(0,num):
+            img, mask, boundary, base_name = dataset.__getitem__(plot_idx)
+
+            plt.figure(figsize=(3,10))
+            plt.subplot(311)
+            plt.imshow(img)
+            plt.subplot(312)
+            plt.imshow(mask)
+            plt.subplot(313)
+            plt.imshow(boundary)
+            plt.tight_layout()
+            plt.show()
+
+    dataset = TransSegmentationBoundary(root='/home/bic/fast-data/Trans10K', is_kopf=False)
+    print(len(dataset))
+    plot_dataset(dataset, 2)
+
+    dataset = TransSegmentationBoundary(root='/home/bic/fast-data/TransKopf', is_kopf=True, split='test', mode='val')
+    print(len(dataset))
+    plot_dataset(dataset, 2)
+

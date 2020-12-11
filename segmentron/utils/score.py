@@ -40,7 +40,6 @@ class SegmentationMetric(object):
             return rt
 
         def evaluate_worker(self, pred, label):
-
             correct, labeled = batch_pix_accuracy(pred, label)
             inter, union = batch_intersection_union(pred, label, self.nclass)
             mae = batch_mae(pred, label)
@@ -73,11 +72,19 @@ class SegmentationMetric(object):
             self.total_bers += bers
             self.total_bers_count += bers_count
 
+            # compute PA
+            pa = (pred.argmax(1) == label).float().mean()
+            IoU = 1.0 * inter / (2.220446049250313e-16 + union)
+            mIoU = IoU.mean().item()
+
+            return pa, mIoU
+
+
         if isinstance(preds, torch.Tensor):
-            evaluate_worker(self, preds, labels)
+            return evaluate_worker(self, preds, labels)
         elif isinstance(preds, (list, tuple)):
             for (pred, label) in zip(preds, labels):
-                evaluate_worker(self, pred, label)
+                return evaluate_worker(self, pred, label)
 
     def get(self, return_category_iou=False):
         """Gets the current evaluation result.
