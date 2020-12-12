@@ -27,13 +27,13 @@ def save_checkpoint(model, epoch, optimizer=None, lr_scheduler=None, is_best=Fal
             logging.info('Epoch {} model saved in: {}'.format(epoch, filename))
 
         # remove last epoch
-        pre_filename = '{}.pth'.format(str(epoch - 1))
-        pre_filename = os.path.join(directory, pre_filename)
-        try:
-            if os.path.exists(pre_filename):
-                os.remove(pre_filename)
-        except OSError as e:
-            logging.info(e)
+        #pre_filename = '{}.pth'.format(str(epoch - 1))
+        #pre_filename = os.path.join(directory, pre_filename)
+        #try:
+        #    if os.path.exists(pre_filename):
+        #        os.remove(pre_filename)
+        #except OSError as e:
+        #    logging.info(e)
 
 def makedirs(path):
     """Create directory recursively if not exists.

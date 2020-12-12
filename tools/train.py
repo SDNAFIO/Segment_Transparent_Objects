@@ -31,13 +31,18 @@ from tools.test_translab import Evaluator
 
 
 class Trainer(object):
-    def __init__(self, args, logger, eval_interval=100, eval_size=20):
+    def __init__(self, args, logger, eval_interval=100, eval_size=20, dataset_root='/home/bic/fast-data/', is_kopf=False):
         self.args = args
         self.device = torch.device(args.device)
         self.logger = logger
         self.evaluators = None
         self.eval_interval = eval_interval
         self.eval_size = eval_size
+
+        if is_kopf:
+            dataset_root = os.path.join(dataset_root, 'TransKopf')
+        else:
+            dataset_root = os.path.join(dataset_root, 'Trans10K')
 
         # image transform
         input_transform = transforms.Compose([
@@ -46,7 +51,7 @@ class Trainer(object):
         ])
         # dataset and dataloader
         data_kwargs = {'transform': input_transform, 'base_size': cfg.TRAIN.BASE_SIZE,
-                       'crop_size': cfg.TRAIN.CROP_SIZE, 'root': '/home/bic/fast-data/Trans10K'}
+                       'crop_size': cfg.TRAIN.CROP_SIZE, 'root': dataset_root, 'is_kopf': is_kopf}
         train_dataset = get_segmentation_dataset(cfg.DATASET.NAME, split='train', mode='train', **data_kwargs)
         # #debug code
         # import cv2
@@ -228,9 +233,9 @@ if __name__ == '__main__':
     comet_exp = Experiment(api_key=api_key, workspace=workspace, project_name=project_name)
 
     # create a trainer and start train
-    trainer = Trainer(args, logger=comet_exp, eval_interval=500, eval_size=300)
-    evaluator_trans = Evaluator(args, logger=comet_exp, is_kopf=False, model=trainer.model)
-    evaluator_kopf = Evaluator(args, logger=comet_exp, is_kopf=True, model=trainer.model)
+    trainer = Trainer(args, logger=comet_exp, eval_interval=500, eval_size=300, dataset_root=cfg['DATASET']['ROOT'], is_kopf=True)
+    evaluator_trans = Evaluator(args, logger=comet_exp, is_kopf=False, model=trainer.model, dataset_root=cfg['DATASET']['ROOT'])
+    evaluator_kopf = Evaluator(args, logger=comet_exp, is_kopf=True, model=trainer.model, dataset_root=cfg['DATASET']['ROOT'])
 
     trainer.set_evaluators([evaluator_trans, evaluator_kopf])
     trainer.train()

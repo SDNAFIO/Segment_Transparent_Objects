@@ -25,6 +25,7 @@ cfg.DATASET.IGNORE_INDEX = -1
 cfg.DATASET.WORKERS = 8
 # val dataset mode
 cfg.DATASET.MODE = 'testval'
+cfg.DATASET.ROOT = ''
 ########################### data augment ######################################
 # data augment image mirror
 cfg.AUG.MIRROR = True

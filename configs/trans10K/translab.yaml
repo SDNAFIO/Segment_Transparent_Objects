@@ -2,6 +2,7 @@ DATASET:
     NAME: "trans10k_boundary"
     MEAN: [0.485, 0.456, 0.406]
     STD: [0.229, 0.224, 0.225]
+    ROOT: '/home/bic/fast-data/'
 TRAIN:
     EPOCHS: 16
     BATCH_SIZE: 2

@@ -30,10 +30,14 @@ from PIL import Image
 
 
 class Evaluator(object):
-    def __init__(self, args, logger: Experiment = None, is_kopf=False, model=None):
+    def __init__(self, args, logger: Experiment = None, is_kopf=False, model=None, dataset_root='/home/bic/fast-data'):
         self.args = args
         self.device = torch.device(args.device)
         self.is_kopf = is_kopf
+        if is_kopf:
+            dataset_root = os.path.join(dataset_root, 'TransKopf')
+        else:
+            dataset_root = os.path.join(dataset_root, 'Trans10K')
 
         if logger is None:
             workspace = 'robharb'
@@ -56,13 +60,13 @@ class Evaluator(object):
                                                    mode='val',
                                                    transform=input_transform,
                                                    is_kopf=is_kopf,
-                                                   base_size=cfg.TRAIN.BASE_SIZE, root='/home/bic/fast-data/TransKopf')
+                                                   base_size=cfg.TRAIN.BASE_SIZE, root=dataset_root)
         else:
             val_dataset = get_segmentation_dataset(cfg.DATASET.NAME,
                                                    split='test',
                                                    mode='val',
                                                    transform=input_transform,
-                                                   base_size=cfg.TRAIN.BASE_SIZE, root='/home/bic/fast-data/Trans10K')
+                                                   base_size=cfg.TRAIN.BASE_SIZE, root=dataset_root)
 
         # validation dataloader
         # val_dataset = get_segmentation_dataset(cfg.DATASET.NAME,
