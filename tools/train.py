@@ -70,7 +70,7 @@ class Trainer(object):
 
         self.train_loader = data.DataLoader(dataset=train_dataset,
                                             batch_sampler=train_batch_sampler,
-                                            num_workers=cfg.DATASET.WORKERS,
+                                            num_workers=4,
                                             pin_memory=True)
 
 

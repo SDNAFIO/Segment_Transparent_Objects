@@ -81,7 +81,7 @@ class Evaluator(object):
 
         self.val_loader = data.DataLoader(dataset=val_dataset,
                                           batch_sampler=val_batch_sampler,
-                                          num_workers=cfg.DATASET.WORKERS,
+                                          num_workers=4,
                                           pin_memory=True)
         logging.info('**** number of images: {}. ****'.format(len(self.val_loader)))
 
