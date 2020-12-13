@@ -7,11 +7,10 @@ import logging
 
 from ..config import cfg
 
-def save_checkpoint(model, epoch, optimizer=None, lr_scheduler=None, is_best=False):
+def save_checkpoint(model, epoch, optimizer=None, lr_scheduler=None, is_best=False, exp_name='unnamed'):
     """Save Checkpoint"""
     directory = os.path.expanduser(cfg.TRAIN.MODEL_SAVE_DIR)
-    # directory = os.path.join(directory, '{}_{}_{}_{}'.format(cfg.MODEL.MODEL_NAME, cfg.MODEL.BACKBONE,
-    #                                                          cfg.DATASET.NAME, cfg.TIME_STAMP))
+    directory = os.path.join(directory, exp_name)
     if not os.path.exists(directory):
         os.makedirs(directory)
     filename = '{}.pth'.format(str(epoch))

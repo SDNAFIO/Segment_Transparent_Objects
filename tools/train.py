@@ -31,7 +31,7 @@ from tools.test_translab import Evaluator
 
 
 class Trainer(object):
-    def __init__(self, args, logger, eval_interval=100, eval_size=20, dataset_root='/home/bic/fast-data/', is_kopf=False):
+    def __init__(self, args, logger: Experiment, eval_interval=100, eval_size=20, dataset_root='/home/bic/fast-data/', is_kopf=False):
         self.args = args
         self.device = torch.device(args.device)
         self.logger = logger
@@ -72,7 +72,6 @@ class Trainer(object):
                                             batch_sampler=train_batch_sampler,
                                             num_workers=4,
                                             pin_memory=True)
-
 
         # create network
         self.model = get_segmentation_model().to(self.device)
@@ -174,7 +173,6 @@ class Trainer(object):
 
             # embed(header='check loader')
 
-
             self.optimizer.zero_grad()
             losses.backward()
             self.optimizer.step()
@@ -197,7 +195,7 @@ class Trainer(object):
                         eta_string))
 
             if iteration % self.iters_per_epoch == 0 and self.save_to_disk:
-                save_checkpoint(self.model, epoch, self.optimizer, self.lr_scheduler, is_best=False)
+                save_checkpoint(self.model, epoch, self.optimizer, self.lr_scheduler, is_best=False, exp_name=self.logger.id)
 
             if iteration % self.eval_interval == 0:
                 for evaluator in self.evaluators:
@@ -231,9 +229,10 @@ if __name__ == '__main__':
     api_key = 'nb8eG5Ru2ZHIELzbmanxmDsqP'
 
     comet_exp = Experiment(api_key=api_key, workspace=workspace, project_name=project_name)
+    comet_exp.add_tag('kopf_pretrained_to_transpfull')
 
     # create a trainer and start train
-    trainer = Trainer(args, logger=comet_exp, eval_interval=500, eval_size=300, dataset_root=cfg['DATASET']['ROOT'], is_kopf=True)
+    trainer = Trainer(args, logger=comet_exp, eval_interval=500, eval_size=300, dataset_root=cfg['DATASET']['ROOT'], is_kopf=False)
     evaluator_trans = Evaluator(args, logger=comet_exp, is_kopf=False, model=trainer.model, dataset_root=cfg['DATASET']['ROOT'])
     evaluator_kopf = Evaluator(args, logger=comet_exp, is_kopf=True, model=trainer.model, dataset_root=cfg['DATASET']['ROOT'])
 
